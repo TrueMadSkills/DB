@@ -108,3 +108,4 @@ CREATE TABLE [dbo].RegisteredAutos(
 GO
 
 INSERT INTO Automobiles(AutoNum, RegionNum, DirectionID) values('A111AA', 196, 0)
+--Ромка ЛОХ
