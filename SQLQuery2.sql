@@ -1,4 +1,4 @@
-USE [#Karpenko]
+USE LAB_2
 GO
 
 SET ANSI_NULLS ON
@@ -78,7 +78,7 @@ GO
 
 CREATE TABLE [dbo].Directions(
 	DirectionID int IDENTITY(1,1),
-	DirectName nchar
+	DirectName [nchar](50)
 	PRIMARY KEY (DirectionID)
 )
 GO
@@ -121,7 +121,6 @@ INSERT INTO Posts values ('Восток')
 INSERT INTO Directions values('в город')
 INSERT INTO Directions values('из города')
 
-INSERT INTO Automobiles values('В123АН', 196, 1)
-INSERT INTO Automobiles values('Ё123АН', 196, 1)
-INSERT INTO Automobiles(AutoNum, RegionNum) values('A111AA', 196)
---Ромка ЛОХ
+INSERT INTO Automobiles values('В123АН', 196)
+INSERT INTO Automobiles values('Ё123АН', 196)
+--Мича ЛОШАРА :))0))0))))
