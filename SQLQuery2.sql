@@ -7,8 +7,6 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-
-
 IF OBJECT_ID (N'RegisteredAutos', N'U') IS NOT NULL 
    DROP TABLE [dbo].RegisteredAutos
 
@@ -34,6 +32,10 @@ IF object_id(N'dbo.IsValidAutoNum', N'FN') IS NOT NULL
     DROP FUNCTION dbo.IsValidAutoNum
 GO
 
+IF object_id(N'dbo.IsValidAutoRegion', N'FN') IS NOT NULL
+    DROP FUNCTION dbo.IsValidAutoRegion
+GO
+
 CREATE FUNCTION dbo.IsValidAutoNum(@autoNum char(50))  
 RETURNS BIT
 BEGIN
@@ -47,6 +49,18 @@ BEGIN
 			return 0;
 		set @ind -= 1;
 	end;
+	return 1;
+END;
+GO
+
+CREATE FUNCTION dbo.IsValidAutoRegion(@autoRegion smallint)  
+RETURNS BIT
+BEGIN
+	if @autoRegion < 100
+		return 1;
+	declare @firstSymbol smallint = cast(@autoRegion/100 as int);
+	if @firstSymbol != 1 and @firstSymbol != 2 and @firstSymbol != 7
+		return 0;
 	return 1;
 END;
 GO
@@ -78,7 +92,7 @@ GO
 
 CREATE TABLE [dbo].Directions(
 	DirectionID int IDENTITY(1,1),
-	DirectName nchar
+	DirectName nchar(50)
 	PRIMARY KEY (DirectionID)
 )
 GO
@@ -86,7 +100,7 @@ GO
 CREATE TABLE [dbo].Automobiles(
 	AutoID int IDENTITY(1,1),
 	AutoNum char(50) CHECK(dbo.IsValidAutoNum(AutoNum) = 1),
-	RegionNum int FOREIGN KEY REFERENCES [RegionsNums](RegistrationNumAuto),
+	RegionNum int  CHECK(dbo.IsValidAutoRegion(RegionNum) = 1) FOREIGN KEY REFERENCES [RegionsNums](RegistrationNumAuto),
 	PRIMARY KEY (AutoID)
 )
 GO
@@ -121,7 +135,8 @@ INSERT INTO Posts values ('Восток')
 INSERT INTO Directions values('в город')
 INSERT INTO Directions values('из города')
 
-INSERT INTO Automobiles values('В123АН', 196, 1)
-INSERT INTO Automobiles values('Ё123АН', 196, 1)
-INSERT INTO Automobiles(AutoNum, RegionNum) values('A111AA', 196)
+INSERT INTO Automobiles values('В123АН', 196)
+INSERT INTO Automobiles values('Ё123АН', 196)
+INSERT INTO Automobiles values('A111AA', 96)
+INSERT INTO Automobiles values('A111AA', 396)
 --Ромка ЛОХ
