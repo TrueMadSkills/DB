@@ -83,18 +83,10 @@ CREATE TABLE [dbo].Directions(
 )
 GO
 
---CREATE TABLE [dbo].AutoTypes(
---	TypeID int IDENTITY(1,1),
---	TypeName nchar
---	PRIMARY KEY (TypeID)
---)
---GO
-
 CREATE TABLE [dbo].Automobiles(
 	AutoID int IDENTITY(1,1),
 	AutoNum char(50) CHECK(dbo.IsValidAutoNum(AutoNum) = 1),
 	RegionNum int FOREIGN KEY REFERENCES [RegionsNums](RegistrationNumAuto),
-	DirectionID int FOREIGN KEY REFERENCES [Directions](DirectionID)
 	PRIMARY KEY (AutoID)
 )
 GO
@@ -103,9 +95,33 @@ CREATE TABLE [dbo].RegisteredAutos(
 	RecordID int IDENTITY(1,1),
 	PostID int FOREIGN KEY REFERENCES [Posts](PostID),
 	AutoID int FOREIGN KEY REFERENCES [Automobiles](AutoID),
+	DirectionID int FOREIGN KEY REFERENCES [Directions](DirectionID),
 	RecordDate smalldatetime
 )
 GO
 
-INSERT INTO Automobiles(AutoNum, RegionNum, DirectionID) values('A111AA', 196, 0)
+INSERT INTO Regions(ConstitutionNum, RegionName) values (66, 'Свердловская область')
+INSERT INTO Regions(ConstitutionNum, RegionName) values (74, 'Челябинская область')
+INSERT INTO Regions(ConstitutionNum, RegionName) values (59, 'Пермский край')
+
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (66, 66)
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (96, 66)
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (196, 66)
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (74, 74)
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (174, 74)
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (59, 59)
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (81, 59)
+INSERT INTO RegionsNums(RegistrationNumAuto, ConstitutionNum) values (159, 59)
+
+INSERT INTO Posts values ('Север')
+INSERT INTO Posts values ('Юг')
+INSERT INTO Posts values ('Запад')
+INSERT INTO Posts values ('Восток')
+
+INSERT INTO Directions values('в город')
+INSERT INTO Directions values('из города')
+
+INSERT INTO Automobiles values('В123АН', 196, 1)
+INSERT INTO Automobiles values('Ё123АН', 196, 1)
+INSERT INTO Automobiles(AutoNum, RegionNum) values('A111AA', 196)
 --Ромка ЛОХ
