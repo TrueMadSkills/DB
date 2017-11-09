@@ -56,10 +56,8 @@ GO
 CREATE FUNCTION dbo.IsValidAutoRegion(@autoRegion smallint)  
 RETURNS BIT
 BEGIN
-	if @autoRegion < 100
-		return 1;
 	declare @firstSymbol smallint = cast(@autoRegion/100 as int);
-	if @firstSymbol != 1 and @firstSymbol != 2 and @firstSymbol != 7
+	if @autoRegion >= 100 and @firstSymbol != 1 and @firstSymbol != 2 and @firstSymbol != 7 or @autoRegion = 0
 		return 0;
 	return 1;
 END;
