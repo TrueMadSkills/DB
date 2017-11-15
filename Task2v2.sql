@@ -159,8 +159,197 @@ INSERT INTO cars.Directions values('в город')
 INSERT INTO cars.Directions values('из города')
 GO
 
+INSERT INTO cars.RegistrationRecords values(1, 'А123ВС74', 1, '14:15:16')
+INSERT INTO cars.RegistrationRecords values(2, 'А123ВС74', 2, '14:30:16')
+INSERT INTO cars.RegistrationRecords values(1, 'А123ВС74', 1, '14:40:16')
+INSERT INTO cars.RegistrationRecords values(2, 'А123ВС74', 2, '14:50:16')
+INSERT INTO cars.RegistrationRecords values(1, 'У555ЕР59', 1, '16:40:16')
+INSERT INTO cars.RegistrationRecords values(1, 'У555ЕР59', 2, '16:50:16')
+INSERT INTO cars.RegistrationRecords values(4, 'К969НО196', 2, '18:40:16')
+INSERT INTO cars.RegistrationRecords values(4, 'К969НО196', 1, '18:50:16')
+INSERT INTO cars.RegistrationRecords values(3, 'А111АА81', 1, '23:55:16')
+GO
 --INSERT INTO cars.RegistrationRecords values(1, 'А123ВС96', 1, '14:15:17')
 --INSERT INTO cars.RegistrationRecords values(1, 'А123ВС96', 1, '14:15:18')
 --INSERT INTO cars.RegistrationRecords values(1, 'А123ВС96', 2, '14:15:19')
 --TRUNCATE TABLE cars.Autos
 --TRUNCATE TABLE cars.RegistrationRecords
+
+CREATE FUNCTION cars.GetAutoType(@AutoID nvarchar(50), @ConstitutionNumber int) 
+RETURNS nvarchar(50)
+BEGIN
+	DECLARE @homeRegion int = 66;
+	DECLARE @lastDirection int = (SELECT TOP 1 Direction
+								FROM cars.RegistrationRecords
+								WHERE AutoID = @AutoID
+								ORDER BY RecordID DESC)
+
+	DECLARE @preLastDirection int = (SELECT TOP 1 Direction
+								   FROM (SELECT TOP 2 RecordID, Direction
+										 FROM cars.RegistrationRecords
+										 WHERE AutoID = @AutoID
+										 ORDER BY RecordID DESC) AS ins
+								   ORDER BY RecordID)
+
+	DECLARE @PostID int = (SELECT TOP 1 PostID
+						   FROM cars.RegistrationRecords
+						   WHERE AutoID = @AutoID
+						   ORDER BY RecordID DESC)
+
+	DECLARE @prePostID int = (SELECT TOP 1 PostID
+							  FROM (SELECT TOP 2 RecordID, PostID
+									FROM cars.RegistrationRecords
+									WHERE AutoID = @AutoID
+									ORDER BY RecordID DESC) AS ins
+							  ORDER BY RecordID)
+
+	DECLARE @existRecord int = (SELECT TOP 2 COUNT(AutoID)
+								FROM cars.RegistrationRecords
+								WHERE AutoID = @AutoID)
+
+	if @existRecord > 1 and @preLastDirection = 1 and @lastDirection = 2
+	begin
+		if @prePostID = @PostID
+			return 'Иногородний';
+		else
+			return 'Транзитный';
+	end
+	if @existRecord > 1 and @preLastDirection = 2 and @lastDirection = 1 and @homeRegion = @ConstitutionNumber
+		return 'Местный'
+	return 'Прочий';
+END;
+GO
+
+----------два вспомогательных представления для вычисления типов авто-------------
+IF OBJECT_ID (N'cars.FirstAutosRegistration', N'U') IS NOT NULL
+	DROP VIEW cars.FirstAutosRegistration
+GO
+
+CREATE VIEW cars.FirstAutosRegistration
+AS
+SELECT AutoID, PostID, Direction, MIN(RecordTime) AS firstTime
+FROM cars.RegistrationRecords
+GROUP BY AutoID, PostID, Direction
+GO
+
+IF OBJECT_ID (N'cars.LastAutosRegistration', N'U') IS NOT NULL
+	DROP VIEW cars.LastAutosRegistration
+GO
+
+CREATE VIEW cars.LastAutosRegistration
+AS
+SELECT AutoID, PostID, Direction, MAX(RecordTime) AS lastTime
+FROM cars.RegistrationRecords
+GROUP BY AutoID, PostID, Direction
+GO
+------------------------------------------------------------------------------------------------
+
+----------Типы автомобилей (через view)---------------------------------------------------------
+----Транзитные----
+IF OBJECT_ID (N'cars.TransitionalAutos', N'U') IS NOT NULL
+	DROP VIEW cars.TransitionalAutos
+GO
+
+CREATE VIEW cars.TransitionalAutos
+AS
+SELECT DISTINCT cars.Autos.AutoNumber AS 'Номер'
+				, cars.Autos.RegionNumber AS 'Номер региона'
+				, cars.Regions.RegionName AS 'Название региона'
+				, far.firstTime AS 'Время первого въезда'
+				, lar.lastTime AS 'Время последнего выезда'
+FROM cars.Autos INNER JOIN
+	 cars.RegionNumbers ON cars.Autos.RegionNumber = cars.RegionNumbers.AutoRegionNumber INNER JOIN
+	 cars.Regions ON cars.RegionNumbers.ConstitutionNum = cars.Regions.ConstitutionNum INNER JOIN
+	 cars.FirstAutosRegistration AS far ON cars.Autos.AutoID = far.AutoID INNER JOIN
+	 cars.LastAutosRegistration AS lar ON cars.Autos.AutoID = lar.AutoID
+WHERE firstTime < lastTime 
+	  AND far.Direction = 1 
+	  AND lar.Direction = 2
+	  AND far.PostID != lar.PostID
+	  AND cars.RegionNumbers.ConstitutionNum != 66
+GO
+
+----Иногородние----
+IF OBJECT_ID (N'cars.NonresidentAutos', N'U') IS NOT NULL
+	DROP VIEW cars.NonresidentAutos
+GO
+
+CREATE VIEW cars.NonresidentAutos
+AS
+SELECT DISTINCT cars.Autos.AutoNumber AS 'Номер'
+				, cars.Autos.RegionNumber AS 'Номер региона'
+				, cars.Regions.RegionName AS 'Название региона'
+				, far.firstTime AS 'Время первого въезда'
+				, lar.lastTime AS 'Время последнего выезда'
+FROM cars.Autos INNER JOIN
+	 cars.RegionNumbers ON cars.Autos.RegionNumber = cars.RegionNumbers.AutoRegionNumber INNER JOIN
+	 cars.Regions ON cars.RegionNumbers.ConstitutionNum = cars.Regions.ConstitutionNum INNER JOIN
+	 cars.FirstAutosRegistration AS far ON cars.Autos.AutoID = far.AutoID INNER JOIN
+	 cars.LastAutosRegistration AS lar ON cars.Autos.AutoID = lar.AutoID
+WHERE firstTime < lastTime 
+	  AND far.Direction = 1 
+	  AND lar.Direction = 2
+	  AND far.PostID = lar.PostID
+GO
+
+----Местные----
+IF OBJECT_ID (N'cars.LocalAutos', N'U') IS NOT NULL
+	DROP VIEW cars.LocalAutos
+GO
+
+CREATE VIEW cars.LocalAutos
+AS
+SELECT DISTINCT cars.Autos.AutoNumber AS 'Номер'
+				, cars.Autos.RegionNumber AS 'Номер региона'
+				, cars.Regions.RegionName AS 'Название региона'
+				, far.firstTime AS 'Время первого въезда'
+				, lar.lastTime AS 'Время последнего выезда'
+FROM cars.Autos INNER JOIN
+	 cars.RegionNumbers ON cars.Autos.RegionNumber = cars.RegionNumbers.AutoRegionNumber INNER JOIN
+	 cars.Regions ON cars.RegionNumbers.ConstitutionNum = cars.Regions.ConstitutionNum INNER JOIN
+	 cars.FirstAutosRegistration AS far ON cars.Autos.AutoID = far.AutoID INNER JOIN
+	 cars.LastAutosRegistration AS lar ON cars.Autos.AutoID = lar.AutoID
+WHERE firstTime < lastTime 
+	  AND far.Direction = 2
+	  AND lar.Direction = 1
+	  AND cars.RegionNumbers.ConstitutionNum = 66
+GO
+
+----Прочие----
+IF OBJECT_ID (N'cars.OtherAutos', N'U') IS NOT NULL
+	DROP VIEW cars.OtherAutos
+GO
+
+CREATE VIEW cars.OtherAutos
+AS
+SELECT DISTINCT cars.Autos.AutoNumber AS 'Номер'
+				, cars.Autos.RegionNumber AS 'Номер региона'
+				, cars.Regions.RegionName AS 'Название региона'
+FROM cars.Autos INNER JOIN
+	 cars.RegionNumbers ON cars.Autos.RegionNumber = cars.RegionNumbers.AutoRegionNumber INNER JOIN
+	 cars.Regions ON cars.RegionNumbers.ConstitutionNum = cars.Regions.ConstitutionNum INNER JOIN
+	 cars.FirstAutosRegistration AS far ON cars.Autos.AutoID = far.AutoID INNER JOIN
+	 cars.LastAutosRegistration AS lar ON cars.Autos.AutoID = lar.AutoID
+EXCEPT SELECT [Номер], [Номер региона], [Название региона] FROM cars.TransitionalAutos
+EXCEPT SELECT [Номер], [Номер региона], [Название региона] FROM cars.NonresidentAutos
+EXCEPT SELECT [Номер], [Номер региона], [Название региона] FROM cars.LocalAutos
+GO
+
+----Универсальный селектор (через функцию определания типа)----
+
+IF OBJECT_ID (N'cars.AutoTypes', N'U') IS NOT NULL
+	DROP VIEW cars.AutoTypes
+GO
+
+CREATE VIEW cars.AutoTypes
+AS
+SELECT DISTINCT cars.GetAutoType(cars.Autos.AutoID, cars.Regions.ConstitutionNum) AS 'Тип авто'
+				, cars.Autos.AutoNumber AS 'Номер'
+				, cars.Autos.RegionNumber AS 'Номер региона'
+				, cars.Regions.RegionName AS 'Название региона'
+FROM cars.Autos INNER JOIN
+	 cars.RegionNumbers ON cars.Autos.RegionNumber = cars.RegionNumbers.AutoRegionNumber INNER JOIN
+	 cars.Regions ON cars.RegionNumbers.ConstitutionNum = cars.Regions.ConstitutionNum INNER JOIN
+	 cars.FirstAutosRegistration AS far ON cars.Autos.AutoID = far.AutoID INNER JOIN
+	 cars.LastAutosRegistration AS lar ON cars.Autos.AutoID = lar.AutoID
+GO
