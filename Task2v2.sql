@@ -349,7 +349,5 @@ SELECT DISTINCT cars.GetAutoType(cars.Autos.AutoID, cars.Regions.ConstitutionNum
 				, cars.Regions.RegionName AS 'Название региона'
 FROM cars.Autos INNER JOIN
 	 cars.RegionNumbers ON cars.Autos.RegionNumber = cars.RegionNumbers.AutoRegionNumber INNER JOIN
-	 cars.Regions ON cars.RegionNumbers.ConstitutionNum = cars.Regions.ConstitutionNum INNER JOIN
-	 cars.FirstAutosRegistration AS far ON cars.Autos.AutoID = far.AutoID INNER JOIN
-	 cars.LastAutosRegistration AS lar ON cars.Autos.AutoID = lar.AutoID
+	 cars.Regions ON cars.RegionNumbers.ConstitutionNum = cars.Regions.ConstitutionNum
 GO
