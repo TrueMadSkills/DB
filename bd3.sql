@@ -129,14 +129,46 @@ INSERT INTO MatchCommand(IDMatch, IDCommand, Goalkeeper, TypeCommand, Goals) val
 INSERT INTO MatchCommand(IDMatch, IDCommand, Goalkeeper, TypeCommand, Goals) values(3, 1, 1, 2, 1)
 GO
 
-DECLARE @IDCommand INT = 3;
-SELECT COUNT(t1.IDMatch) AS 'Число побед' 
-	FROM MatchCommand t1
-	INNER JOIN MatchCommand t2 ON t1.IDMatch = t2.IDMatch
-	WHERE t1.Goals > t2.Goals AND t1.IDCommand = @IDCommand
+--DECLARE @IDCommand INT = 3;
+--SELECT COUNT(t1.IDMatch) AS 'Число побед' 
+--	FROM MatchCommand t1
+--	INNER JOIN MatchCommand t2 ON t1.IDMatch = t2.IDMatch
+--	WHERE t1.Goals > t2.Goals AND t1.IDCommand = @IDCommand
 
-DECLARE @IDCommand INT = 2;
-SELECT Count(t1.IDCommand)
-	FROM MatchCommand t1
+--DECLARE @IDCommand INT = 2;
+--SELECT Count(t1.IDCommand)
+--	FROM MatchCommand t1
+--	INNER JOIN MatchCommand t2 ON t1.IDMatch = t2.IDMatch
+--	WHERE t1.Goals > t2.Goals AND t1.IDCommand = @IDCommand AND t1.IDCommand != t2.IDCommand
+
+
+IF OBJECT_ID (N'dbo.GetPointsCommand', N'FN') IS NOT NULL
+	DROP FUNCTION dbo.GetPointsCommand
+GO
+CREATE FUNCTION dbo.GetPointsCommand(@CommandID int)  
+RETURNS INT
+BEGIN
+	declare @pointsWins int = (SELECT Count(t1.IDCommand)
+							FROM MatchCommand t1
+							INNER JOIN MatchCommand t2 ON t1.IDMatch = t2.IDMatch
+							WHERE t1.Goals > t2.Goals AND t1.IDCommand = @CommandID AND t1.IDCommand != t2.IDCommand)
+	declare @pointsDraws int = (SELECT Count(t1.IDCommand)
+							FROM MatchCommand t1
+							INNER JOIN MatchCommand t2 ON t1.IDMatch = t2.IDMatch
+							WHERE t1.Goals = t2.Goals AND t1.IDCommand = @CommandID AND t1.IDCommand != t2.IDCommand)
+	return @pointsWins*3 + @pointsDraws;
+END;
+GO
+
+
+
+SELECT Commands.Name AS 'Команда',
+	dbo.GetPointsCommand(t1.IDCommand) AS 'Очки',
+	SUM(t1.Goals) AS 'Голы',
+	SUM(t2.Goals) AS 'Пропущено'
+FROM MatchCommand t1
 	INNER JOIN MatchCommand t2 ON t1.IDMatch = t2.IDMatch
-	WHERE t1.Goals > t2.Goals AND t1.IDCommand = @IDCommand AND t1.IDCommand != t2.IDCommand
+	INNER JOIN Commands ON t1.IDCommand = Commands.ID
+WHERE t1.IDCommand != t2.IDCommand
+GROUP BY Commands.Name, t1.IDCommand
+GO
